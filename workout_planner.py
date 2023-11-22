@@ -1,38 +1,55 @@
 import streamlit as st
 import pandas as pd
-from constraint import Problem
+from ortools.sat.python import cp_model
 
 
 @st.cache_data(persist=True)
 def read_and_filter(filename, muscle_group):
     df = pd.read_csv(filename)
-    filtered = df[df['major_muscle'] == muscle_group][:20]
-    return filtered
+    filtered = df[df['major_muscle'] == muscle_group]
+    # Can be removed, just ensuring that there is no bias in the selection
+    shuffled = filtered.sample(frac=1).reset_index(drop=True)
+    return shuffled
 
 
 def create_problem(df):
-    problem = Problem()
+    model = cp_model.CpModel()
 
-    records = df.to_dict('records')
+    exercise_vars = {}
+    for index, row in df.iterrows():
+        exercise_vars[row['exercise']] = model.NewBoolVar(row['exercise'])
 
-    for exercise in records:
-        problem.addVariable(exercise['exercise'], [0, 1])
+    upper_bound, lower_bound = 7, 5
+    model.Add(sum(exercise_vars.values()) >= lower_bound)
+    model.Add(sum(exercise_vars.values()) <= upper_bound)
 
-    problem.addConstraint(lambda *selected_workouts: 5 <= sum(selected_workouts)
-                          <= 7, tuple(workout['exercise'] for workout in records))
-    return problem
+    return model, exercise_vars
 
 
-def solve(problem):
-    solutions = problem.getSolutions()
+def solve(model, exercise_vars, df):
+    solver = cp_model.CpSolver()
+    status = solver.Solve(model)
 
-    selected_workouts = []
-    for solution in solutions:
-        selected_workouts = [workout for workout,
-                             selected in solution.items() if selected == 1]
-        if len(selected_workouts) in [5, 6, 7]:
-            break
-    return selected_workouts
+    if status == cp_model.OPTIMAL:
+        selected_workouts = [exercise for exercise,
+                             var in exercise_vars.items() if solver.Value(var) == 1]
+
+        rows = []
+        for workout in selected_workouts:
+            row = df[df['exercise'] == workout].copy()
+            row['target_muscles'] = row['target_muscles'].str.title()
+            rows.append(row)
+
+        output = pd.concat(rows)
+        output.drop(columns=['utility', 'minor_muscle',
+                    'major_muscle'], inplace=True)
+
+        output.reset_index(inplace=True, drop=True)
+        output.index += 1
+        return output
+    else:
+        # No solution found
+        return None
 
 
 st.title("Plan your next workout intelligently")
@@ -43,13 +60,9 @@ muscle_group = st.selectbox("What muscle group are you working out today?",
 
 with st.spinner("Generating your workout..."):
     df = read_and_filter('exercises_cleaned.csv', muscle_group)
-    problem = create_problem(df)
-
-    selected_workouts = solve(problem)
-    workouts_df = pd.DataFrame(selected_workouts, columns=["Exercise"])
-    workouts_df.index += 1
-
-if workouts_df.empty:
+    model, exercise_vars = create_problem(df)
+    selected_workouts = solve(model, exercise_vars, df)
+if selected_workouts is None:
     st.write("No workout generated")
 else:
-    st.write(workouts_df)
+    st.write(selected_workouts)
