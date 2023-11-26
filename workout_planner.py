@@ -70,7 +70,8 @@ def find_lowest_contributing_exercise(selected_workouts):
     # Move the index by 1 to account for the difference calculation
     min_index = differences.index(min(differences)) + 1
     lowest_contributor = selected_workouts[min_index]
-    return lowest_contributor
+    total_muscles = len(contribution_set)
+    return lowest_contributor, total_muscles
 
 
 def solve(model, exercise_vars, df):
@@ -82,10 +83,15 @@ def solve(model, exercise_vars, df):
                              var in exercise_vars.items() if solver.Value(var) == 1]
 
         # TODO: Remove the exercise that contributes the least to the workout, and resolve the problem
-        lowest_contributor = find_lowest_contributing_exercise(
+        lowest_contributor, total_muscles = find_lowest_contributing_exercise(
             selected_workouts)
-        # df.drop(df[df['exercise'] == lowest_contributor].index, inplace=True)
         st.write(f"{lowest_contributor} is the least contributing exercise")
+        st.write(
+            f"There are {total_muscles} unique muscles being utilized in the workout")
+
+        if not 27 <= total_muscles <= 30:
+            st.write("The workout is not balanced, trying again...")
+            # TODO: Create a new model, and remove the lowest contributor
 
         rows = []
         for workout in selected_workouts:
