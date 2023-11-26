@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from ortools.sat.python import cp_model
+import re
 
 
 @st.cache_data(persist=True)
@@ -19,11 +20,57 @@ def create_problem(df):
     for index, row in df.iterrows():
         exercise_vars[row['exercise']] = model.NewBoolVar(row['exercise'])
 
-    upper_bound, lower_bound = 7, 5
+    upper_bound, lower_bound = 4, 4
     model.Add(sum(exercise_vars.values()) >= lower_bound)
     model.Add(sum(exercise_vars.values()) <= upper_bound)
 
     return model, exercise_vars
+
+
+def extract_and_add(**kwargs):
+    all_muscles = []
+    pattern = re.compile(r"'([^']+)'")
+
+    for _, value in kwargs.items():
+        matches = pattern.findall(value)
+        for match in matches:
+            all_muscles.append(match)
+    return all_muscles
+
+
+def get_all_muscles(exercise):
+    # TODO: Remove this line, and have the cleaned csv contain these columns instead
+    original = pd.read_csv('exrx.csv')
+
+    row = original[original['exercise'] == exercise]
+    target_muscles = row['target_muscles'].values[0]
+    synergist_muscles = row['synergist_muscles'].values[0]
+    stabilizer_muscles = row['stabilizer_muscles'].values[0]
+    dynamic_stabilizer_muscles = row['dynamic_stabilizer_muscles'].values[0]
+    antagonist_stabilizer_muscles = row['antagonist_stabilizer_muscles'].values[0]
+
+    kwargs = {'target_muscles': target_muscles, 'synergist_muscles': synergist_muscles, 'stabilizer_muscles': stabilizer_muscles,
+              'dynamic_stabilizer_muscles': dynamic_stabilizer_muscles, 'antagonist_stabilizer_muscles': antagonist_stabilizer_muscles}
+    all_muscles = extract_and_add(**kwargs)
+    return all_muscles
+
+
+def find_lowest_contributing_exercise(selected_workouts):
+    contribution_set = set()
+    contribution_set_sizes = []
+    for exercise in selected_workouts:
+        all_muscles = get_all_muscles(exercise)
+        for muscle in all_muscles:
+            contribution_set.add(muscle)
+        contribution_set_sizes.append(len(contribution_set))
+
+    differences = [contribution_set_sizes[i] - contribution_set_sizes[i - 1]
+                   for i in range(1, len(contribution_set_sizes))]
+
+    # Move the index by 1 to account for the difference calculation
+    min_index = differences.index(min(differences)) + 1
+    lowest_contributor = selected_workouts[min_index]
+    return lowest_contributor
 
 
 def solve(model, exercise_vars, df):
@@ -33,6 +80,12 @@ def solve(model, exercise_vars, df):
     if status == cp_model.OPTIMAL:
         selected_workouts = [exercise for exercise,
                              var in exercise_vars.items() if solver.Value(var) == 1]
+
+        # TODO: Remove the exercise that contributes the least to the workout, and resolve the problem
+        lowest_contributor = find_lowest_contributing_exercise(
+            selected_workouts)
+        # df.drop(df[df['exercise'] == lowest_contributor].index, inplace=True)
+        st.write(f"{lowest_contributor} is the least contributing exercise")
 
         rows = []
         for workout in selected_workouts:
@@ -51,6 +104,8 @@ def solve(model, exercise_vars, df):
         # No solution found
         return None
 
+
+st.set_page_config(page_title="Workout Planner", page_icon="💪")
 
 st.title("Plan your next workout intelligently")
 muscle_group = st.selectbox("What muscle group are you working out today?",
