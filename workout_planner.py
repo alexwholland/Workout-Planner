@@ -8,6 +8,9 @@ import re
 def read_and_filter(filename, muscle_group):
     df = pd.read_csv(filename)
     filtered = df[df['major_muscle'] == muscle_group]
+    if filtered.empty:
+        filtered = df[df['minor_muscle'] == muscle_group]
+
     # Can be removed, just ensuring that there is no bias in the selection
     shuffled = filtered.sample(frac=1).reset_index(drop=True)
     return shuffled
@@ -20,7 +23,7 @@ def create_problem(df):
     for index, row in df.iterrows():
         exercise_vars[row['exercise']] = model.NewBoolVar(row['exercise'])
 
-    upper_bound, lower_bound = 4, 4
+    upper_bound, lower_bound = 7, 5
     model.Add(sum(exercise_vars.values()) >= lower_bound)
     model.Add(sum(exercise_vars.values()) <= upper_bound)
 
@@ -82,16 +85,18 @@ def solve(model, exercise_vars, df):
         selected_workouts = [exercise for exercise,
                              var in exercise_vars.items() if solver.Value(var) == 1]
 
-        # TODO: Remove the exercise that contributes the least to the workout, and resolve the problem
         lowest_contributor, total_muscles = find_lowest_contributing_exercise(
             selected_workouts)
-        st.write(f"{lowest_contributor} is the least contributing exercise")
-        st.write(
-            f"There are {total_muscles} unique muscles being utilized in the workout")
 
-        if not 27 <= total_muscles <= 30:
-            st.write("The workout is not balanced, trying again...")
-            # TODO: Create a new model, and remove the lowest contributor
+        if not 21 <= total_muscles <= 30:
+            df = df[df['exercise'] != lowest_contributor]
+
+            model, exercise_vars = create_problem(df)
+
+            solve(model, exercise_vars, df)
+
+        st.write(
+            f"• Removing {lowest_contributor} from the workout")
 
         rows = []
         for workout in selected_workouts:
@@ -115,7 +120,8 @@ st.set_page_config(page_title="Workout Planner", page_icon="💪")
 
 st.title("Plan your next workout intelligently")
 muscle_group = st.selectbox("What muscle group are you working out today?",
-                            ("Chest", "Back", "Legs", "Shoulders", "Arms"),
+                            ("Neck", "Shoulders", "Upper Arms", "Forearms",
+                             "Back", "Chest", "Waist", "Hips", "Thighs", "Calves"),
                             index=None,
                             placeholder="Select a muscle group")
 
@@ -126,4 +132,6 @@ with st.spinner("Generating your workout..."):
 if selected_workouts is None:
     st.write("No workout generated")
 else:
+    st.write("#")
+    st.write("We found a workout for you! 🎉")
     st.write(selected_workouts)
