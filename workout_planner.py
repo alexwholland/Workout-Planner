@@ -4,6 +4,7 @@ import re
 from ortools.sat.python import cp_model
 from itertools import permutations
 
+# TODO: Should probably remove this, and only use the cleaned csv
 global original_df
 original_df = pd.read_csv('exrx.csv')
 
@@ -133,13 +134,10 @@ def solve(model, exercise_vars, df):
 
             st.text(f"• Removed {exercise} from the workout")
 
-            # Recursive call and concatenate the output
             output = solve(model, exercise_vars, df)
         else:
             st.text(f"• Keeping {exercise} in the workout")
-            # Process the output here
             output = process_output(selected_workouts, df)
-
     return output
 
 
