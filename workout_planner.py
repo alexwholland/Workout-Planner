@@ -10,11 +10,11 @@ original_df = pd.read_csv('exrx.csv')
 
 
 @st.cache_data(persist=True)
-def read_and_filter(filename, muscle_group):
+def read_and_filter(filename, muscle_groups):
     df = pd.read_csv(filename)
-    filtered = df[df['major_muscle'] == muscle_group]
+    filtered = df[df['major_muscle'].isin(muscle_groups)]
     if filtered.empty:
-        filtered = df[df['minor_muscle'] == muscle_group]
+        filtered = df[df['minor_muscle'].isin(muscle_groups)]
 
     # Can be removed, just ensuring that there is no bias in the selection
     shuffled = filtered.sample(frac=1).reset_index(drop=True)
@@ -144,20 +144,35 @@ def solve(model, exercise_vars, df):
 st.set_page_config(page_title="Workout Planner", page_icon="💪")
 
 st.title("Plan your next workout intelligently")
-muscle_group = st.selectbox("What muscle group are you working out today?",
-                            ("Neck", "Shoulders", "Upper Arms", "Forearms",
-                             "Back", "Chest", "Waist", "Hips", "Thighs", "Calves"),
-                            index=None,
-                            placeholder="Select a muscle group")
+muscle_groups = st.multiselect("Select muscle groups for your workout",
+                               ["Neck", "Shoulders", "Upper Arms", "Forearms",
+                                "Back", "Chest", "Waist", "Hips", "Thighs", "Calves"],
+                               default=["Shoulders"])  # Default selection can be adjusted
 
-with st.spinner("Generating your workout..."):
-    df = read_and_filter('exercises_cleaned.csv', muscle_group)
-    model, exercise_vars = create_problem(df)
-    selected_workouts = solve(model, exercise_vars, df)
+generate_button = st.button("Generate Workout")
 
-if selected_workouts is None:
-    st.write("No workout generated")
-else:
-    st.write("#")
-    st.write("We found a workout for you! 🎉")
-    st.write(selected_workouts)
+if generate_button:
+    with st.spinner("Generating your workout..."):
+        # Create a dictionary to store results for each muscle group
+        muscle_results = {}
+
+        for muscle_group in muscle_groups:
+            df = read_and_filter('exercises_cleaned.csv', [muscle_group])
+            model, exercise_vars = create_problem(df)
+            selected_workouts = solve(model, exercise_vars, df)
+
+            if selected_workouts is not None:
+                muscle_results[muscle_group] = selected_workouts
+
+        if not muscle_results:
+            st.write("No workout generated")
+        else:
+            st.write("#")
+            st.write("Workout Results 🎉")
+
+            # Concatenate all workout results into one DataFrame
+            all_workouts = pd.concat(muscle_results.values(), keys=muscle_results.keys(), names=['Muscle Group'])
+
+            # Display the combined table
+            st.write("## All Workouts")
+            st.write(all_workouts)
