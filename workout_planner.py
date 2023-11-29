@@ -106,11 +106,11 @@ def process_output(selected_workouts, df):
         rows.append(row)
 
     output = pd.concat(rows)
-    output.drop(columns=['utility', 'minor_muscle',
-                'major_muscle'], inplace=True)
+    output = output[['exercise', 'target_muscles', 'mechanics']]  # Select specific columns
     output.reset_index(inplace=True, drop=True)
     output.index += 1
     return output
+
 
 
 def solve(model, exercise_vars, df):
@@ -175,4 +175,4 @@ if generate_button:
 
             # Display the combined table
             st.write("## All Workouts")
-            st.write(all_workouts)
+            st.dataframe(all_workouts, hide_index=True,)
