@@ -1,23 +1,23 @@
 import csv
 
 muscles = {
-    'Upper Arms': 3.5,
-    'Shoulders': 3.0,
-    'Hips': 2.5,
-    'Calves': 2.8,
-    'Back': 3.2,
-    'Thighs': 3.0,
-    'Waist': 2.0,
-    'Chest': 3.8,
-    'Forearms': 2.2,
-    'Neck': 1.5
+    'Upper Arms': 20,
+    'Shoulders': 29,
+    'Hips': 18,
+    'Calves': 13,
+    'Back': 28,
+    'Thighs': 34,
+    'Waist': 35,
+    'Chest': 20,
+    'Forearms': 10,
+    'Neck': 19
 }
 
 muscle_data = []
 
 for muscle, size in muscles.items():
-    lower_bound = round(max(1, size - 0.5), 1)
-    upper_bound = round(min(4, size + 0.5), 1)
+    lower_bound = round( size -3, 1)
+    upper_bound = round( size +3, 1)
     muscle_data.append({'Muscle': muscle, 'Lower Bound': lower_bound, 'Upper Bound': upper_bound})
 
 csv_file_path = 'muscle_bounds.csv'
