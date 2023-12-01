@@ -4,7 +4,6 @@ import re
 from ortools.sat.python import cp_model
 from itertools import permutations
 
-# TODO: Should probably remove this, and only use the cleaned csv
 global original_df
 global muscle_bounds
 original_df = pd.read_csv('exercises_cleaned.csv')
@@ -56,8 +55,14 @@ def get_all_muscles(exercise):
     dynamic_stabilizer_muscles = row['dynamic_stabilizer_muscles'].values[0]
     antagonist_stabilizer_muscles = row['antagonist_stabilizer_muscles'].values[0]
 
-    kwargs = {'target_muscles': target_muscles, 'synergist_muscles': synergist_muscles, 'stabilizer_muscles': stabilizer_muscles,
-              'dynamic_stabilizer_muscles': dynamic_stabilizer_muscles, 'antagonist_stabilizer_muscles': antagonist_stabilizer_muscles}
+    kwargs = {
+        'target_muscles': target_muscles,
+        'synergist_muscles': synergist_muscles,
+        'stabilizer_muscles': stabilizer_muscles,
+        'dynamic_stabilizer_muscles': dynamic_stabilizer_muscles,
+        'antagonist_stabilizer_muscles':
+        antagonist_stabilizer_muscles
+    }
     all_muscles = extract_and_add(**kwargs)
     return all_muscles
 
@@ -108,16 +113,20 @@ def process_output(selected_workouts, df):
         rows.append(row)
 
     output = pd.concat(rows)
-    output = output[['exercise', 'target_muscles', 'mechanics']]  # Select specific columns
+
+    # Select specific columns
+    output = output[['exercise', 'target_muscles', 'mechanics']]
     output.reset_index(inplace=True, drop=True)
     output.index += 1
     return output
 
+
 def get_bounds(exercise):
     row = original_df[original_df['exercise'] == exercise]
     target_muscles = row['minor_muscle'].values[0]
-    bounds= muscle_bounds[muscle_bounds['Muscle'] == target_muscles]
+    bounds = muscle_bounds[muscle_bounds['Muscle'] == target_muscles]
     return bounds['Lower Bound'].sum(), bounds['Upper Bound'].sum()
+
 
 def solve(model, exercise_vars, df):
     solver = cp_model.CpSolver()
@@ -142,7 +151,7 @@ def solve(model, exercise_vars, df):
 
             output = solve(model, exercise_vars, df)
         else:
-            st.text(f"• Keeping {exercise} in the workout")
+            st.text(f"• Kept {exercise} in the workout")
             output = process_output(selected_workouts, df)
     return output
 
@@ -150,10 +159,21 @@ def solve(model, exercise_vars, df):
 st.set_page_config(page_title="Workout Planner", page_icon="💪")
 
 st.title("Plan your next workout intelligently")
-muscle_groups = st.multiselect("Select muscle groups for your workout",
-                               ["Neck", "Shoulders", "Upper Arms", "Forearms",
-                                "Back", "Chest", "Waist", "Hips", "Thighs", "Calves"],
-                               default=["Shoulders"])  # Default selection can be adjusted
+muscle_groups = st.multiselect(
+    "Select muscle groups for your workout",
+    [
+        "Neck",
+        "Shoulders",
+        "Upper Arms",
+        "Forearms",
+        "Back",
+        "Chest",
+        "Waist",
+        "Hips",
+        "Thighs",
+        "Calves"
+    ],
+)
 
 generate_button = st.button("Generate Workout")
 
@@ -174,11 +194,16 @@ if generate_button:
             st.write("No workout generated")
         else:
             st.write("#")
-            st.write("Workout Results 🎉")
 
             # Concatenate all workout results into one DataFrame
-            all_workouts = pd.concat(muscle_results.values(), keys=muscle_results.keys(), names=['Muscle Group'])
+            all_workouts = pd.concat(muscle_results.values(
+            ), keys=muscle_results.keys(), names=['Muscle Group'])
 
             # Display the combined table
-            st.write("## All Workouts")
-            st.dataframe(all_workouts, hide_index=True,)
+            st.write("## Here are the results! 🎉")
+            columns_to_display = ['exercise', 'target_muscles', 'mechanics']
+            filtered_workouts = all_workouts[columns_to_display]
+            filtered_workouts.reset_index(
+                inplace=True, drop=True)
+            filtered_workouts.index += 1
+            st.table(filtered_workouts)
