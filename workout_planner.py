@@ -6,7 +6,9 @@ from itertools import permutations
 
 # TODO: Should probably remove this, and only use the cleaned csv
 global original_df
-original_df = pd.read_csv('exrx.csv')
+global muscle_bounds
+original_df = pd.read_csv('exercises_cleaned.csv')
+muscle_bounds = pd.read_csv('muscle_bounds.csv')
 
 
 @st.cache_data(persist=True)
@@ -111,7 +113,11 @@ def process_output(selected_workouts, df):
     output.index += 1
     return output
 
-
+def get_bounds(exercise):
+    row = original_df[original_df['exercise'] == exercise]
+    target_muscles = row['minor_muscle'].values[0]
+    bounds= muscle_bounds[muscle_bounds['Muscle'] == target_muscles]
+    return bounds['Lower Bound'].sum(), bounds['Upper Bound'].sum()
 
 def solve(model, exercise_vars, df):
     solver = cp_model.CpSolver()
@@ -126,8 +132,8 @@ def solve(model, exercise_vars, df):
             selected_workouts)
         exercise = most_common_lowest_contributor[0]
         total_muscles = most_common_lowest_contributor[1]
-
-        if not 21 <= total_muscles <= 30:
+        lower_bound, upper_bound = get_bounds(exercise)
+        if not lower_bound <= total_muscles <= upper_bound:
             df = df[df['exercise'] != exercise]
 
             model, exercise_vars = create_problem(df)
