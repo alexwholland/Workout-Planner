@@ -14,6 +14,8 @@ streamlit run workout_planner.py
 
 - **Intelligent Workout Generation:** The code employs a CSP approach to intelligently generate a workout schedule based on the selected muscle groups.
 
+- **Heuristic Function:** A heuristic function is incorporated to maximize the number of unique muscles being trained in the generated exercise set, ensuring a well-rounded workout.
+
 - **Dynamic Exercise Filtering:** The system filters exercises from a pre-existing dataset ('exercises_cleaned.csv') based on the chosen muscle groups, ensuring a tailored workout plan.
 
 - **Optimal Workout Selection:** The application aims to balance the workout routine by selecting exercises that collectively target a diverse range of muscles.
@@ -29,7 +31,7 @@ streamlit run workout_planner.py
 
 3. On the web application or the locally-run instance, select the desired muscle groups and click the "Generate Workout" button.
 
-4. The system will intelligently generate a workout plan, displaying the results, including exercise names, target muscles, and mechanics.
+4. The system will intelligently generate a workout plan, considering the heuristic function for maximizing unique muscle training. Results include exercise names, target muscles, and mechanics.
 
 ## Technical Details
 
@@ -37,9 +39,11 @@ streamlit run workout_planner.py
 
 - **Data Loading:** The code reads exercise data from 'exercises_cleaned.csv' and muscle bounds from 'muscle_bounds.csv'.
 
+- **Heuristic Function:** The heuristic function maximizes the number of unique muscles being trained, enhancing the overall effectiveness of the workout plan.
+
 - **Constraint Satisfaction Problem (CSP):** The application formulates a CSP using the ortools library to generate a balanced workout plan.
 
-- **Permutations and Selection:** The code explores permutations of selected exercises to find the most common lowest contributing exercise, ensuring a balanced workout.
+- **Permutations and Selection:** The code explores permutations of selected exercises to find the most common lowest contributing exercise, considering the heuristic function.
 
 - **Streamlit Integration:** The application is built using the Streamlit framework for a user-friendly interface.
 
@@ -53,4 +57,4 @@ streamlit run workout_planner.py
 
 This Workout Planner is designed to assist users in creating balanced and effective workout routines. Feel free to provide feedback or report issues for continuous improvement.
 
-**Let's Get Jacked Together 💪**
+**Let's get jacked together! 💪**
